@@ -1,0 +1,206 @@
+{
+  "name": "string",
+  "type": "Microsoft.Compute/virtualMachines",
+  "apiVersion": "2019-12-01",
+  "parameters": {
+    "Base_Name": {
+        "type": "string"
+    },
+    "AdminUserName": {
+        "type": "string",
+        "defaultValue": "syslogcef"
+    },
+    "AdminPassword": {
+        "type": "securestring"
+    },
+    "workspaceId": {
+        "type": "string"
+    },
+    "workspaceKey": {
+        "type": "string"
+    }
+},
+"variables": {
+    "storage_name": "[tolower(concat(parameters('Base_Name'), 'diag'))]",
+    "nsg_Name": "[concat(parameters('Base_Name'),'-nsg')]",
+    "vnet_Name": "[concat(parameters('Base_Name'), '-vnet')]",
+    "pip_Name": "[concat(parameters('Base_Name'),'-pip')]",
+    "cloudinit": "[concat('#cloud-config\nruncmd:\n  - sudo apt-get update\n  - sudo echo \"root         soft    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"root         hard    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"*         soft    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"*         hard    nofile         65536\" >> /etc/security/limits.conf\n  - sudo wget https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/DataConnectors/CEF/cef_installer.py&&sudo python cef_installer.py ', parameters('workspaceId'), ' ', parameters('workspaceKey'), '\n  - sudo wget https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/DataConnectors/CEF-VMSS/security-config-omsagent.conf -O /etc/rsyslog.d/security-config-omsagent.conf\n  - sudo sed -i -e ''s@*.*;auth,authpriv.none@syslog.*;auth,authpriv.none@g'' /etc/rsyslog.d/50-default.conf\n  - sudo sed -i -e ''s@input(type=\"imudp\" port=\"514\")@input(type=\"imudp\" port=\"514\" ruleset=\"forwarddata\")@g'' /etc/rsyslog.conf\n  - sudo sed -i -e ''s@input(type=\"imtcp\" port=\"514\")@input(type=\"imtcp\" port=\"514\" ruleset=\"forwarddata\")@g'' /etc/rsyslog.conf\n  - sudo systemctl restart rsyslog\n  - sudo /opt/microsoft/omsagent/bin/service_control stop ', parameters('workspaceId'), '\n  - sudo /opt/microsoft/omsagent/bin/service_control start ', parameters('workspaceId'))]"
+},
+  "properties": {
+    "hardwareProfile": {
+      "vmSize": "Standard_F4s_v2"
+    },
+    "storageProfile": {
+      "imageReference": {
+        "publisher": "Canonical",
+        "offer": "UbuntuServer",
+        "sku": "18.04-LTS",
+        "version": "latest"
+      },
+      "osDisk": {
+        "osType": "string",
+        "encryptionSettings": {
+          "diskEncryptionKey": {
+            "secretUrl": "string",
+            "sourceVault": {
+              "id": "string"
+            }
+          },
+          "keyEncryptionKey": {
+            "keyUrl": "string",
+            "sourceVault": {
+              "id": "string"
+            }
+          },
+          "enabled": "boolean"
+        },
+        "name": "string",
+        "vhd": {
+          "uri": "string"
+        },
+        "image": {
+          "uri": "string"
+        },
+        "caching": "string",
+        "writeAcceleratorEnabled": "boolean",
+        "diffDiskSettings": {
+          "option": "Local",
+          "placement": "string"
+        },
+        "createOption": "string",
+        "diskSizeGB": "integer",
+        "managedDisk": {
+          "id": "string",
+          "storageAccountType": "string",
+          "diskEncryptionSet": {
+            "id": "string"
+          }
+        }
+      },
+      "dataDisks": [
+        {
+          "lun": "integer",
+          "name": "string",
+          "vhd": {
+            "uri": "string"
+          },
+          "image": {
+            "uri": "string"
+          },
+          "caching": "string",
+          "writeAcceleratorEnabled": "boolean",
+          "createOption": "string",
+          "diskSizeGB": "integer",
+          "managedDisk": {
+            "id": "string",
+            "storageAccountType": "string",
+            "diskEncryptionSet": {
+              "id": "string"
+            }
+          },
+          "toBeDetached": "boolean"
+        }
+      ]
+    },
+    "additionalCapabilities": {
+      "ultraSSDEnabled": "boolean"
+    },
+    "osProfile": {
+      "computerName": "string",
+      "adminUsername": "string",
+      "adminPassword": "string",
+      "customData": "string",
+      "windowsConfiguration": {
+        "provisionVMAgent": "boolean",
+        "enableAutomaticUpdates": "boolean",
+        "timeZone": "string",
+        "additionalUnattendContent": [
+          {
+            "passName": "OobeSystem",
+            "componentName": "Microsoft-Windows-Shell-Setup",
+            "settingName": "string",
+            "content": "string"
+          }
+        ],
+        "winRM": {
+          "listeners": [
+            {
+              "protocol": "string",
+              "certificateUrl": "string"
+            }
+          ]
+        }
+      },
+      "linuxConfiguration": {
+        "disablePasswordAuthentication": "boolean",
+        "ssh": {
+          "publicKeys": [
+            {
+              "path": "string",
+              "keyData": "string"
+            }
+          ]
+        },
+        "provisionVMAgent": "boolean"
+      },
+      "secrets": [
+        {
+          "sourceVault": {
+            "id": "string"
+          },
+          "vaultCertificates": [
+            {
+              "certificateUrl": "string",
+              "certificateStore": "string"
+            }
+          ]
+        }
+      ],
+      "allowExtensionOperations": "boolean",
+      "requireGuestProvisionSignal": "boolean"
+    },
+    "networkProfile": {
+      "networkInterfaces": [
+        {
+          "id": "string",
+          "properties": {
+            "primary": "boolean"
+          }
+        }
+      ]
+    },
+    "diagnosticsProfile": {
+      "bootDiagnostics": {
+        "enabled": "boolean",
+        "storageUri": "string"
+      }
+    },
+    "availabilitySet": {
+      "id": "string"
+    },
+    "virtualMachineScaleSet": {
+      "id": "string"
+    },
+    "proximityPlacementGroup": {
+      "id": "string"
+    },
+    "priority": "string",
+    "evictionPolicy": "string",
+    "billingProfile": {
+      "maxPrice": "number"
+    },
+    "host": {
+      "id": "string"
+    },
+    "licenseType": "string"
+  },
+  "identity": {
+    "type": "string",
+    "userAssignedIdentities": {}
+  },
+  "zones": [
+    "string"
+  ],
+  "resources": []
+}
