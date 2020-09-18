@@ -1,206 +1,284 @@
 {
-  "name": "string",
-  "type": "Microsoft.Compute/virtualMachines",
-  "apiVersion": "2019-12-01",
-  "parameters": {
-    "Base_Name": {
-        "type": "string"
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "Base_Name": {
+            "type": "string"
+        },
+        "AdminUserName": {
+            "type": "string"
+        },
+        "AdminPassword": {
+            "type": "securestring"
+        },
+        "workspaceId": {
+            "type": "string"
+        },
+        "workspaceKey": {
+            "type": "string"
+        }
     },
-    "AdminUserName": {
-        "type": "string",
-        "defaultValue": "syslogcef"
+    "variables": {
+        "vm_Name": "[concat(parameters('Base_Name'), '-vm')]",
+        "nic_Name": "[concat(parameters('Base_Name'),'-nic')]",
+        "storage_name": "[tolower(concat(parameters('Base_Name'), 'diag'))]",
+        "nsg_Name": "[concat(parameters('Base_Name'),'-nsg')]",
+        "vnet_Name": "[concat(parameters('Base_Name'), '-vnet')]",
+        "subnet_Name": "[concat(parameters('Base_Name'), '-vnet')]",
+        "pip_Name": "[concat(parameters('Base_Name'),'-pip')]",
+        "nsgId": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('nsg_Name'))]",
+        "vnetId": "[resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', variables('vnet_Name'))]",
+        "subnetRef": "[concat(variables('vnetId'), '/subnets/', variables('subnet_Name'))]",
+        "publicIpAllocationMethod": "static",
+        "publicIpAddressSku": "standard",
+        "osDiskType": "Premium_LRS",
+        "virtualMachineSize": "Standard_F4s_v2",
+        "cloudinit": "[concat('#cloud-config\nruncmd:\n  - sudo apt-get update\n  - sudo echo \"root         soft    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"root         hard    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"*         soft    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"*         hard    nofile         65536\" >> /etc/security/limits.conf\n  - sudo wget https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/DataConnectors/CEF/cef_installer.py&&sudo python cef_installer.py ', parameters('workspaceId'), ' ', parameters('workspaceKey'), '\n  - sudo systemctl restart rsyslog\n  - sudo /opt/microsoft/omsagent/bin/service_control stop ', parameters('workspaceId'), '\n  - sudo /opt/microsoft/omsagent/bin/service_control start ', parameters('workspaceId'))]"
     },
-    "AdminPassword": {
-        "type": "securestring"
-    },
-    "workspaceId": {
-        "type": "string"
-    },
-    "workspaceKey": {
-        "type": "string"
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-06-01",
+            "name": "[variables('storage_name')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "supportsHttpsTrafficOnly": true
+            }
+        },
+        {
+            "name": "[variables('nic_Name')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2019-07-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('nsg_Name'))]",
+                "[concat('Microsoft.Network/virtualNetworks/', variables('vnet_Name'))]",
+                "[concat('Microsoft.Network/publicIpAddresses/', variables('pip_Name'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIpAddress": {
+                                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('pip_Name'))]"
+                            }
+                        }
+                    }
+                ],
+                "enableAcceleratedNetworking": false,
+                "networkSecurityGroup": {
+                    "id": "[variables('nsgId')]"
+                }
+            }
+        },
+        {
+            "name": "[variables('nsg_Name')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2019-02-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "Allow-Syslog-TCP",
+                        "properties": {
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "514",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 1000,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    },
+                    {
+                        "name": "Allow-Syslog-UDP",
+                        "properties": {
+                            "protocol": "UDP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "514",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 1001,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    },
+                    {
+                        "name": "Allow-SSH",
+                        "properties": {
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "22",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 1002,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2019-11-01",
+            "name": "[variables('vnet_Name')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsg_Name'))]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnet_Name')]",
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsg_Name'))]"
+                            },
+                            "serviceEndpoints": [
+                            ],
+                            "delegations": [
+                            ],
+                            "privateEndpointNetworkPolicies": "Enabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        }
+                    }
+                ],
+                "virtualNetworkPeerings": [
+                ],
+                "enableDdosProtection": false,
+                "enableVmProtection": false
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2019-11-01",
+            "name": "[concat(variables('vnet_Name'), '/', variables('subnet_Name'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet_Name'))]"
+            ],
+            "properties": {
+                "addressPrefix": "10.0.0.0/24",
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Networks/networkSecurityGroups', variables('nsg_Name'))]"
+                },
+                "serviceEndpoints": [
+                ],
+                "delegations": [
+                ],
+                "privateEndpointNetworkPolicies": "Enabled",
+                "privateLinkServiceNetworkPolicies": "Enabled"
+            }
+        },
+        {
+            "name": "[variables('pip_Name')]",
+            "type": "Microsoft.Network/publicIpAddresses",
+            "apiVersion": "2019-02-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIpAllocationMethod": "[variables('publicIpAllocationMethod')]"
+            },
+            "sku": {
+                "name": "[variables('publicIpAddressSku')]"
+            }
+        },
+        {
+            "name": "[variables('vm_Name')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2020-06-01",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', variables('nic_Name'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[variables('virtualMachineSize')]"
+                },
+                "storageProfile": {
+                    "osDisk": {
+                        "createOption": "fromImage",
+                        "managedDisk": {
+                            "storageAccountType": "[variables('osDiskType')]"
+                        }
+                    },
+                    "imageReference": {
+                        "publisher": "Canonical",
+                        "offer": "UbuntuServer",
+                        "sku": "18.04-LTS",
+                        "version": "latest"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nic_Name'))]"
+                        }
+                    ]
+                },
+                "osProfile": {
+                    "computerName": "[variables('vm_Name')]",
+                    "adminUsername": "[parameters('AdminUserName')]",
+                    "adminPassword": "[parameters('AdminPassword')]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": false,
+                        "provisionVMAgent": true
+                    },
+                    "customData": "[base64(variables('cloudinit'))]"
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storage_name'))).primaryEndpoints.blob]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "adminUsername": {
+            "type": "string",
+            "value": "[parameters('AdminUserName')]"
+        },
+         "b64customData": {
+            "type": "string",
+            "value": "[base64(variables('cloudinit'))]"
+        },
+        "customData": {
+            "type": "string",
+            "value": "[variables('cloudinit')]"
+        },
+        "osprofile": {
+            "type": "object",
+            "value": "[reference(variables('vm_Name'))]"
+        }
     }
-},
-"variables": {
-    "storage_name": "[tolower(concat(parameters('Base_Name'), 'diag'))]",
-    "nsg_Name": "[concat(parameters('Base_Name'),'-nsg')]",
-    "vnet_Name": "[concat(parameters('Base_Name'), '-vnet')]",
-    "pip_Name": "[concat(parameters('Base_Name'),'-pip')]",
-    "cloudinit": "[concat('#cloud-config\nruncmd:\n  - sudo apt-get update\n  - sudo echo \"root         soft    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"root         hard    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"*         soft    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"*         hard    nofile         65536\" >> /etc/security/limits.conf\n  - sudo wget https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/DataConnectors/CEF/cef_installer.py&&sudo python cef_installer.py ', parameters('workspaceId'), ' ', parameters('workspaceKey'), '\n  - sudo wget https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/DataConnectors/CEF-VMSS/security-config-omsagent.conf -O /etc/rsyslog.d/security-config-omsagent.conf\n  - sudo sed -i -e ''s@*.*;auth,authpriv.none@syslog.*;auth,authpriv.none@g'' /etc/rsyslog.d/50-default.conf\n  - sudo sed -i -e ''s@input(type=\"imudp\" port=\"514\")@input(type=\"imudp\" port=\"514\" ruleset=\"forwarddata\")@g'' /etc/rsyslog.conf\n  - sudo sed -i -e ''s@input(type=\"imtcp\" port=\"514\")@input(type=\"imtcp\" port=\"514\" ruleset=\"forwarddata\")@g'' /etc/rsyslog.conf\n  - sudo systemctl restart rsyslog\n  - sudo /opt/microsoft/omsagent/bin/service_control stop ', parameters('workspaceId'), '\n  - sudo /opt/microsoft/omsagent/bin/service_control start ', parameters('workspaceId'))]"
-},
-  "properties": {
-    "hardwareProfile": {
-      "vmSize": "Standard_F4s_v2"
-    },
-    "storageProfile": {
-      "imageReference": {
-        "publisher": "Canonical",
-        "offer": "UbuntuServer",
-        "sku": "18.04-LTS",
-        "version": "latest"
-      },
-      "osDisk": {
-        "osType": "string",
-        "encryptionSettings": {
-          "diskEncryptionKey": {
-            "secretUrl": "string",
-            "sourceVault": {
-              "id": "string"
-            }
-          },
-          "keyEncryptionKey": {
-            "keyUrl": "string",
-            "sourceVault": {
-              "id": "string"
-            }
-          },
-          "enabled": "boolean"
-        },
-        "name": "string",
-        "vhd": {
-          "uri": "string"
-        },
-        "image": {
-          "uri": "string"
-        },
-        "caching": "string",
-        "writeAcceleratorEnabled": "boolean",
-        "diffDiskSettings": {
-          "option": "Local",
-          "placement": "string"
-        },
-        "createOption": "string",
-        "diskSizeGB": "integer",
-        "managedDisk": {
-          "id": "string",
-          "storageAccountType": "string",
-          "diskEncryptionSet": {
-            "id": "string"
-          }
-        }
-      },
-      "dataDisks": [
-        {
-          "lun": "integer",
-          "name": "string",
-          "vhd": {
-            "uri": "string"
-          },
-          "image": {
-            "uri": "string"
-          },
-          "caching": "string",
-          "writeAcceleratorEnabled": "boolean",
-          "createOption": "string",
-          "diskSizeGB": "integer",
-          "managedDisk": {
-            "id": "string",
-            "storageAccountType": "string",
-            "diskEncryptionSet": {
-              "id": "string"
-            }
-          },
-          "toBeDetached": "boolean"
-        }
-      ]
-    },
-    "additionalCapabilities": {
-      "ultraSSDEnabled": "boolean"
-    },
-    "osProfile": {
-      "computerName": "string",
-      "adminUsername": "string",
-      "adminPassword": "string",
-      "customData": "string",
-      "windowsConfiguration": {
-        "provisionVMAgent": "boolean",
-        "enableAutomaticUpdates": "boolean",
-        "timeZone": "string",
-        "additionalUnattendContent": [
-          {
-            "passName": "OobeSystem",
-            "componentName": "Microsoft-Windows-Shell-Setup",
-            "settingName": "string",
-            "content": "string"
-          }
-        ],
-        "winRM": {
-          "listeners": [
-            {
-              "protocol": "string",
-              "certificateUrl": "string"
-            }
-          ]
-        }
-      },
-      "linuxConfiguration": {
-        "disablePasswordAuthentication": "boolean",
-        "ssh": {
-          "publicKeys": [
-            {
-              "path": "string",
-              "keyData": "string"
-            }
-          ]
-        },
-        "provisionVMAgent": "boolean"
-      },
-      "secrets": [
-        {
-          "sourceVault": {
-            "id": "string"
-          },
-          "vaultCertificates": [
-            {
-              "certificateUrl": "string",
-              "certificateStore": "string"
-            }
-          ]
-        }
-      ],
-      "allowExtensionOperations": "boolean",
-      "requireGuestProvisionSignal": "boolean"
-    },
-    "networkProfile": {
-      "networkInterfaces": [
-        {
-          "id": "string",
-          "properties": {
-            "primary": "boolean"
-          }
-        }
-      ]
-    },
-    "diagnosticsProfile": {
-      "bootDiagnostics": {
-        "enabled": "boolean",
-        "storageUri": "string"
-      }
-    },
-    "availabilitySet": {
-      "id": "string"
-    },
-    "virtualMachineScaleSet": {
-      "id": "string"
-    },
-    "proximityPlacementGroup": {
-      "id": "string"
-    },
-    "priority": "string",
-    "evictionPolicy": "string",
-    "billingProfile": {
-      "maxPrice": "number"
-    },
-    "host": {
-      "id": "string"
-    },
-    "licenseType": "string"
-  },
-  "identity": {
-    "type": "string",
-    "userAssignedIdentities": {}
-  },
-  "zones": [
-    "string"
-  ],
-  "resources": []
 }
