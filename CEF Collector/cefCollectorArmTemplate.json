@@ -32,7 +32,7 @@
         "publicIpAllocationMethod": "static",
         "publicIpAddressSku": "standard",
         "osDiskType": "Premium_LRS",
-        "virtualMachineSize": "Standard_F4s_v2",
+        "virtualMachineSize": "Standard_D2s_v4",
         "cloudinit": "[concat('#cloud-config\nruncmd:\n  - sudo apt-get update\n  - sudo echo \"root         soft    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"root         hard    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"*         soft    nofile         65536\" >> /etc/security/limits.conf\n  - sudo echo \"*         hard    nofile         65536\" >> /etc/security/limits.conf\n  - sudo wget https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/DataConnectors/CEF/cef_installer.py&&sudo python cef_installer.py ', parameters('workspaceId'), ' ', parameters('workspaceKey'), '\n  - sudo systemctl restart rsyslog\n  - sudo /opt/microsoft/omsagent/bin/service_control stop ', parameters('workspaceId'), '\n  - sudo /opt/microsoft/omsagent/bin/service_control start ', parameters('workspaceId'))]"
     },
     "resources": [
