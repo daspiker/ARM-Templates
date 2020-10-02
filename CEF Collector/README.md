@@ -19,6 +19,6 @@ Workspace Id <br>
 Workspace Key 
 
 You can find these settings under: <br>
-Log Analytics Workspace > <Pick the Workspace you want to use> > Advanced Settings > Agents Management
+Log Analytics Workspace > Pick the Workspace you want to use > Advanced Settings > Agents Management
 
 The Workspace Key can be the Primary or Secondary key 
