@@ -1,6 +1,13 @@
-This ARM Template is designed for a low cost, single collector design to make it easy to get Syslog and CEF formatted Syslog feeds into Azure Sentinel.  Please consider the security requirements of your organization before deploying this ARM Template and feel free to modify for your needs.  This link provides some security guidance: 
+This ARM Template is designed for a low cost, single collector design to make it easy to get Syslog and CEF formatted Syslog feeds into Azure Sentinel for a lab or testing environment or a production environment where cost considerations are paramount.  The template is built around a Standard_D2s_v4 VM which should work well in a lab or low EPS / GB per Day environment but it does not provide auto-scaling or high performance.  There are VMSS based templates for enterprise scale deployments and requirements available here:
+
+https://techcommunity.microsoft.com/t5/azure-sentinel/scaling-up-syslog-cef-collection/ba-p/1185854
+
+Please consider the security requirements of your organization before deploying this ARM Template and feel free to modify for your needs.  This link provides some security guidance: 
 
 https://docs.microsoft.com/en-us/azure/sentinel/connect-common-event-format#security-considerations
+
+Once this collector is deployed, you can just point CEF log sources at the IP address of the collector and those log should start showing up in the CommondSecurityLog table in Azure Sentinel.  For Syslog log source, you can just point the logs sources at the IP address of the collector but you will need to configure the facilities to collect in the Log Analytics Workspace with the Azure portal under Log Analystics Workspace > <Select your Workspace> > Advanced Settings > Data > Syslog > <Enter the facilities that your Syslog sources are using and check the log levels you want>  Make sure to select the checkbox to "Apply below configuration...." and click Save.  This will push these settings to the collector.
+
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdaspiker%2FARM-Templates%2Fmaster%2FCEF%2520Collector%2FcefCollectorArmTemplate.json" target="_blank">
   <img src="https://aka.ms/deploytoazurebutton"/>
