@@ -3,7 +3,7 @@
   <img src="https://aka.ms/deploytoazurebutton"/>
 </a>
 
-This ARM Template is designed for a low cost, single collector design to make it easy to get Syslog and CEF formatted Syslog feeds into Azure Sentinel for a lab or testing environment or a production environment where cost considerations are paramount.  The template is built around a Standard_D2s_v4 VM which should work well in a lab or low EPS / GB per Day environment but it does not provide auto-scaling or high performance.  There are VMSS based templates for enterprise scale deployments and requirements available here:
+This ARM Template is designed for a low cost, single collector design to make it easy to get Syslog and CEF formatted Syslog feeds into Azure Sentinel for a lab or testing environment or a production environment where cost considerations are paramount.  The template is built around a Standard_D2s_v4 VM which should work well in a lab or low EPS / GB per Day environment but it does not provide auto-scaling or high performance.  There are VMSS based templates for enterprise scale deployments available here:
 
 https://techcommunity.microsoft.com/t5/azure-sentinel/scaling-up-syslog-cef-collection/ba-p/1185854
 
