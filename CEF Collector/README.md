@@ -12,5 +12,16 @@ https://docs.microsoft.com/en-us/azure/sentinel/connect-common-event-format#secu
 
 Once this collector is deployed, you can just point CEF log sources at the IP address of the collector and those log should start showing up in the CommonSecurityLog table in Azure Sentinel.  For Syslog log source, you can just point the logs sources at the IP address of the collector but you will need to configure the facilities to collect in the Log Analytics Workspace with the Azure portal under Log Analystics Workspace > <Select your Workspace> > Advanced Settings > Data > Syslog > <Enter the facilities that your Syslog sources are using and check the log levels you want>  Make sure to select the checkbox to "Apply below configuration...." and click Save.  This will push these settings to the collector.  Once this is done you should see the logs appear under the Syslog table.
 
+To deploy this template you will need:
+
+Workspace Id 
+Workspace Key 
+
+You can find these settings under:
+Log Analytics Workspace > <Pick the Workspace you want to use> > Advanced Settings > Agents Management
+
+The Workspace Key can be the Primary or Secondary key
+
+
 
 
